@@ -5,16 +5,20 @@
 
 
 #define NUM_KEYS 8
+#define NUM_PWMS 3
 #define PWM_STEP_ON 15
-#define PWM_STEP_OFF 25
+#define PWM_STEP_OFF 50
 
 struct kpair{
     int key;
     int port;
     int tout;
-    unsigned int pwm_max;
-    unsigned int pwm_cur;
 } kpairs[NUM_KEYS];
+
+struct pwm {
+    unsigned int max;
+    unsigned int cur;
+} pwms[NUM_PWMS];
 
 void pinval(struct kpair *k, int pin)
 {
@@ -27,42 +31,53 @@ void pinval(struct kpair *k, int pin)
 
 void init_pwm (void)
 {
-    TCCR1A=(1<<COM1A1)|(1<<WGM10);
+    TCCR1A=(1<<COM1A1)|(1<<COM1B1)|(1<<WGM10);
     TCCR1B=(1<<CS10);
+    TCCR2 = (1<<COM21)|(1<<WGM20)|(1<<CS20);
     OCR1A=0x00;
-    for (int i=0; i < NUM_KEYS; ++i) {
-        kpairs[i].pwm_max = 0xffff;
+    OCR1B=0x00;
+    OCR2=0x00;
+    for (int i=0; i < NUM_PWMS; ++i) {
+        pwms[i].max = 0xffff;
     }
 }
 
 void handle_pwm(int index, struct kpair *k) {
-    if (index > 0) {
+    if (index >= NUM_PWMS) {
         return;
     }
-    if (k->port && (k->pwm_cur < k->pwm_max)) {
-        if (k->pwm_cur > k->pwm_max - PWM_STEP_ON) {
-            k->pwm_cur = k->pwm_max;
+    struct pwm *pwm = &pwms[index];
+    if (k->port && (pwm->cur < pwm->max)) {
+        if (pwm->cur > pwm->max - PWM_STEP_ON) {
+            pwm->cur = pwm->max;
         } else {
-            k->pwm_cur += PWM_STEP_ON;
+            pwm->cur += PWM_STEP_ON;
         }
-    } else if (!k->port && (k->pwm_cur > 0)) {
-        if (k->pwm_cur < PWM_STEP_OFF) {
-            k->pwm_cur = 0;
+    } else if (!k->port && (pwm->cur > 0)) {
+        if (pwm->cur < PWM_STEP_OFF) {
+            pwm->cur = 0;
         } else {
-            k->pwm_cur -= PWM_STEP_OFF;
+            pwm->cur -= PWM_STEP_OFF;
         }
     }
-    OCR1A = k->pwm_cur / 0x100;
+    switch (index) {
+    case 0:
+        OCR1A = pwm->cur / 0x100;
+        break;
+    case 1:
+        OCR1B = pwm->cur / 0x100;
+        break;
+    case 2:
+        OCR2 = pwm->cur / 0x100;
+        break;
+    }
 }
 
 int main(void)
 {
-    int pwm = 0;
-    int pwmp = 0;
-    int pwms = 1;
     DDRD = 0xff; //Set D-group as output
     DDRC = 0x00; //Set C-group as input
-    DDRB=0x02;
+    DDRB = 0x0e;
 
     memset (&kpairs, 0, sizeof(kpairs));
     init_pwm();
