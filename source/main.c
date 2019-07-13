@@ -10,12 +10,12 @@
 #define DEF_PWM_MAX 0xffff
 #define DEF_PWM_STEP_WARMING 15
 #define DEF_PWM_STEP_COOLING 50
-#define DEF_PWM_STEP_CONTROL_K 2
+#define DEF_PWM_STEP_CONTROL_K 3
 
 #define PROTECT_FALSE_POSITIVE_MIN_PRC 80
-#define PROTECT_BOUNCE 300
+#define PROTECT_BOUNCE 100
 
-#define KEY_HOLD_MIN 1000
+#define KEY_HOLD_MIN 500
 
 enum lstate {
     LSTATE_OFF = 0,
@@ -135,6 +135,9 @@ ON_KEVENT(WARMING_UP)
             l->state = LSTATE_WARM;
         }
         break;
+    case KEVENT_ONCE:
+        l->state = LSTATE_OFF;
+        break;
     default:
         return;
         break;
@@ -151,6 +154,9 @@ ON_KEVENT(COOLING_DOWN)
         if(light_pwm_down(l, l->pwm_step_cooling / l->pwm_step_control_k, 0)) {
             l->state = LSTATE_OFF;
         }
+        break;
+    case KEVENT_ONCE:
+        l->state = LSTATE_OFF;
         break;
     default:
         return;
@@ -238,7 +244,7 @@ enum kevent key_event_gen(struct key *k, unsigned char pin)
         }
     }
     if (!kstate) {
-        enum kevent ev = (k->state_flags | KSTATE_WENT_ONCE) ?
+        enum kevent ev = (k->state_flags & KSTATE_WENT_ONCE) ?
             KEVENT_NONE : KEVENT_UP;
         k->tick_counter = 0;
         k->high_tick_counter = 0;
