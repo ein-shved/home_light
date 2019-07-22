@@ -356,21 +356,25 @@ void init_data(void)
 
 int main(void)
 {
-    DDRD = 0xff; //Set D-group as output
+    DDRD = 0b0111; //Set D-group as output
     DDRC = 0x00; //Set C-group as input
     DDRB = 0x0e;
 
     init_pwm();
     init_data();
     while (1) {
+        unsigned char val = 0;
         for (int i=0; i < NUM_LIGHTS; ++i) {
             unsigned mask = 1 << i;
             struct key *k = keys + i;
             struct light *l = lights + i;
             key_process(k, !!(PINC & mask), l);
             put_pwm(l, i);
+            if (lstate_on(l->state)) {
+                val |= mask;
+            }
         }
-        //PORTD = val;
+        PORTD = val;
     }
     return 0;
 }
