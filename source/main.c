@@ -279,13 +279,13 @@ void put_pwm(struct light *l, int index)
     }
     switch (index) {
     case 0:
-        OCR1A = l->pwm_cur / 0x100;
+        OCR2 = l->pwm_cur / 0x100;
         break;
     case 1:
-        OCR1B = l->pwm_cur / 0x100;
+        OCR1A = l->pwm_cur / 0x100;
         break;
     case 2:
-        OCR2 = l->pwm_cur / 0x100;
+        OCR1B = l->pwm_cur / 0x100;
         break;
     }
 }
